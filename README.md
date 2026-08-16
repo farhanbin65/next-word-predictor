@@ -1,7 +1,8 @@
+```
  _  _ ____ _  _ ___    _ _ _  ____ ____ ____    ___  ____ ____ ___  _ ____ ___ ____ ____ 
  |\ | |___  \/   |     | | |  |  | |__/ |  \    |__] |__/ |___ |  \ | |     |  |  | |__/ 
- |  \| |___ _\/_ |     |_|_|  |__| |  \ |__/    |    |  \ |___ |__/ | |___  |  |__| |  \
-
+ |  \| |___ _\/_ |     |_|_|  |__| |  \ |__/    |    |  \ |___ |__/ | |___  |  |__| |  \ 
+```
 
 A SwiftKey style next word prediction app built with R, trained on 150,000 lines of real English text from blogs, news and Twitter.
 
@@ -18,30 +19,23 @@ A SwiftKey style next word prediction app built with R, trained on 150,000 lines
 ## Prediction Flow
 
 ```mermaid
-flowchart TD
-    A([User Types a Phrase]) --> B[Clean Input\nLowercase + Remove Symbols]
-    B --> C[Extract Last 3 Words]
-    
-    C --> D{Search Quadgrams\n3.7M sequences}
-    D -->|Match Found| E([Return Top 5 Predictions])
-    D -->|No Match| F[Extract Last 2 Words]
-    
-    F --> G{Search Trigrams\n2.9M sequences}
-    G -->|Match Found| E
-    G -->|No Match| H[Extract Last Word]
-    
-    H --> I{Search Bigrams\n1.3M pairs}
-    I -->|Match Found| E
-    I -->|No Match| J{Fallback to\nTop Unigrams}
-    
-    J --> E
+flowchart LR
+    A([Input]) --> B[Clean Text]
+    B --> C{Quadgram\n3.7M}
+    C -->|Match| E([Top 5 Words])
+    C -->|No Match| D{Trigram\n2.9M}
+    D -->|Match| E
+    D -->|No Match| F{Bigram\n1.3M}
+    F -->|Match| E
+    F -->|No Match| G{Unigram\nFallback}
+    G --> E
 
     style A fill:#1a1a2e,color:#fff
     style E fill:#667eea,color:#fff
+    style C fill:#2d6a4f,color:#fff
     style D fill:#2d6a4f,color:#fff
-    style G fill:#2d6a4f,color:#fff
-    style I fill:#2d6a4f,color:#fff
-    style J fill:#c9184a,color:#fff
+    style F fill:#2d6a4f,color:#fff
+    style G fill:#c9184a,color:#fff
 ```
 
 ## How It Works
