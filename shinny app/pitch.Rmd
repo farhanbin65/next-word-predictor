@@ -1,0 +1,95 @@
+---
+title: "Next Word Predictor"
+author: "Farhan Bin Hossain"
+date: "`r Sys.Date()`"
+output: slidy_presentation
+---
+
+## The Problem & Solution
+
+**Problem:** Typing on mobile is slow and error-prone
+
+**Solution:** A next-word prediction app trained on real English text — just like SwiftKey
+
+- Trained on **150,000 lines** of blogs, news and tweets
+- Uses **N-gram language modelling**
+- Instant predictions as you type
+- Click any prediction to append it to your phrase
+
+**Try it:** https://jjvqgo-farhan-bin.shinyapps.io/next-word-predictor/
+
+---
+
+## How The Algorithm Works
+
+**Stupid Backoff N-gram Model — 4 layers of prediction:**
+
+```
+User types → check QUADGRAMS (3,707,806 sequences)
+No match?  → check TRIGRAMS  (2,997,658 sequences)
+No match?  → check BIGRAMS   (1,361,416 pairs)
+No match?  → fallback to most common UNIGRAMS
+```
+
+**Example:**
+
+- Input: *"happy new"*
+- Trigram lookup: happy + new → **year** ✓
+
+This ensures a prediction is **always returned** — never blank!
+
+---
+
+## The Training Data
+
+| Source  | Lines     | Avg Words Per Line |
+|---------|-----------|--------------------|
+| Blogs   | 899,288   | 42 words           |
+| News    | 1,010,242 | 35 words           |
+| Twitter | 2,360,148 | 12 words           |
+
+**Total N-grams built:**
+
+- 100,501 unique words
+- 1,361,416 bigrams
+- 2,997,658 trigrams
+- 3,707,806 quadgrams
+
+Data was lowercased, punctuation removed and symbols stripped before training
+
+---
+
+## Using The App
+
+**3 simple steps:**
+
+1. Go to the app link below
+2. Type any word or phrase in the text box
+3. Click any predicted word to append it and keep typing!
+
+**Live demo results:**
+
+| Phrase | Top Prediction |
+|--------|---------------|
+| happy new | year |
+| I was going to | be, happen |
+| the president of the | united |
+| I want to go | back, out |
+| thanks for the | follow, mention |
+
+---
+
+## Summary & Links
+
+**What was built:**
+
+- Full EDA on 4 million lines of real English text
+- N-gram model with nearly 8 million sequences
+- Live Shiny web app with instant predictions
+
+**Links:**
+
+- App: https://jjvqgo-farhan-bin.shinyapps.io/next-word-predictor/
+- RPubs Report: https://rpubs.com/keo/word_prediction
+
+*Johns Hopkins Data Science Capstone — Farhan Bin Hossain*

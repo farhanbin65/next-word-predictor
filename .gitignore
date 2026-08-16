@@ -1,0 +1,8 @@
+swiftkey_cache/
+dataset/
+shinny app/*.rds
+*.rds
+.Rhistory
+.RData
+.Rproj.user
+__pycache__/

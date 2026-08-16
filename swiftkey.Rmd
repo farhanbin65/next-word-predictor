@@ -1,0 +1,189 @@
+---
+title: "SwiftKey NLP Capstone - Milestone Report"
+author: "Farhan Bin Hossain"
+date: "2026-08-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidytext)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+
+## Overview
+This report presents a analysis of the SwiftKey Dataset provided by Johns Hopkins and Coursera.
+
+---
+
+## 1. Data Summary
+
+```{r load-data, cache=TRUE}
+setwd("/Users/keo/Documents/projects/swiftkey/dataset")
+
+blogs   <- readLines("en_US/en_US.blogs.txt",   encoding = "UTF-8", skipNul = TRUE)
+news    <- readLines("en_US/en_US.news.txt",    encoding = "UTF-8", skipNul = TRUE)
+twitter <- readLines("en_US/en_US.twitter.txt", encoding = "UTF-8", skipNul = TRUE)
+
+blogs_size   <- file.info("en_US/en_US.blogs.txt")$size   / 1024^2
+news_size    <- file.info("en_US/en_US.news.txt")$size    / 1024^2
+twitter_size <- file.info("en_US/en_US.twitter.txt")$size / 1024^2
+
+summary_table <- data.frame(
+  Source   = c("Blogs", "News", "Twitter"),
+  Lines    = c(length(blogs), length(news), length(twitter)),
+  Size_MB  = round(c(blogs_size, news_size, twitter_size), 1)
+)
+
+knitr::kable(summary_table, caption = "Dataset Summary")
+```
+
+The dataset is large — over **4 million lines** and **556 MB** of raw text. 
+To keep analysis efficient, a random sample of 10,000 lines per source 
+was used throughout this report.
+
+---
+
+## 2. Average Words Per Line
+
+```{r sampling, cache=TRUE}
+set.seed(42)
+sample_blogs   <- sample(blogs,   10000)
+sample_news    <- sample(news,    10000)
+sample_twitter <- sample(twitter, 10000)
+all_text <- c(sample_blogs, sample_news, sample_twitter)
+
+source_words <- data.frame(
+  Source = c("Blogs", "News", "Twitter"),
+  Avg_Words_Per_Line = c(
+    mean(sapply(strsplit(sample_blogs,   " "), length)),
+    mean(sapply(strsplit(sample_news,    " "), length)),
+    mean(sapply(strsplit(sample_twitter, " "), length))
+  )
+)
+
+ggplot(source_words, aes(x = Source, y = Avg_Words_Per_Line, fill = Source)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = c("#2166ac", "#4dac26", "#d01c8b")) +
+  labs(title = "Average Words Per Line by Source",
+       x = "Source", y = "Avg Words") +
+  theme_minimal()
+```
+
+Blogs contain the longest text averaging around **42 words per line**, 
+while Twitter is shortest at around **12 words** due to character limits. 
+This difference will influence how the prediction model handles short 
+vs long context.
+
+---
+
+## 3. Most Common Words
+
+```{r wordcount}
+text_df <- data.frame(text = all_text, stringsAsFactors = FALSE)
+
+word_counts <- text_df %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  count(word, sort = TRUE) %>%
+  filter(grepl("^[a-z]+$", word))
+
+word_counts %>%
+  top_n(20, n) %>%
+  ggplot(aes(x = reorder(word, n), y = n, fill = n)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  scale_fill_gradient(low = "#6baed6", high = "#08306b") +
+  labs(title = "Top 20 Most Common Words",
+       subtitle = "Stopwords removed",
+       x = "Word", y = "Count") +
+  theme_minimal()
+```
+
+The most frequent words — **time, people, day, love, life** — reflect the 
+personal and conversational nature of the data sources.
+
+---
+
+## 4. Bigrams (Two-Word Pairs)
+
+```{r bigrams}
+bigrams_filtered <- data.frame(text = all_text, stringsAsFactors = FALSE) %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+  filter(!is.na(bigram)) %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  filter(grepl("^[a-z]+$", word1)) %>%
+  filter(grepl("^[a-z]+$", word2))
+
+bigrams_filtered %>%
+  unite(bigram, word1, word2, sep = " ") %>%
+  count(bigram, sort = TRUE) %>%
+  top_n(20, n) %>%
+  ggplot(aes(x = reorder(bigram, n), y = n, fill = n)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  scale_fill_gradient(low = "#74c476", high = "#00441b") +
+  labs(title = "Top 20 Most Common Bigrams",
+       subtitle = "Two-word pairs (stopwords removed)",
+       x = "Bigram", y = "Count") +
+  theme_minimal()
+```
+
+---
+
+## 5. Trigrams (Three-Word Sequences)
+
+```{r trigrams}
+data.frame(text = all_text, stringsAsFactors = FALSE) %>%
+  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+  filter(!is.na(trigram)) %>%
+  count(trigram, sort = TRUE) %>%
+  top_n(20, n) %>%
+  ggplot(aes(x = reorder(trigram, n), y = n, fill = n)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  scale_fill_gradient(low = "#fdae6b", high = "#7f2704") +
+  labs(title = "Top 20 Most Common Trigrams",
+       subtitle = "Three-word sequences",
+       x = "Trigram", y = "Count") +
+  theme_minimal()
+```
+
+Trigrams like **"one of the"** and **"a lot of"** reveal natural English 
+phrasing patterns that the prediction model will learn from.
+
+---
+
+## 6. Plan for Prediction Algorithm
+
+The next word prediction model will work like:
+
+1. **N-gram lookup** — When a usir types a word or phrase, the system will compare it with bigrams and trigrams and predict the next word.
+2. **Backoff strategy** — If no trigram found, it will go back to bigram then unigram (most common word)
+3. **Training** — For better acuracy the model need to be trained on larger dataset.
+4. **Cleaning** — filtering and punctuation removal will be applied
+
+---
+
+## 7. Plan for Shiny App
+
+The Shiny app will:
+
+- Provide a **text input box** where users type a word or phrase
+- Instantly display the **top 3 predicted next words**
+- Show a simple bar chart of prediction confidence
+- Be fast and lightweight by using a pre-computed lookup table
+
+---
+
+## Conclusion
+
+The  analysis confirms the data is rich, diverse, and suitable 
+for building a next word prediction. findings include significant 
+differences in text length across sources, and clear patterns in word and 
+phrase frequency that will directly inform the prediction algorithm.
+
